@@ -65,3 +65,71 @@ class AppTest {
 #### 2. DisplayName
 - `@DisplayNameGeneration`보다 우선순위가 높다.
 - 띄어쓰기나 한글, 이모지 등을 자유롭게 사용할 수 있다.
+
+### API
+* assertEquals() : 매개변수로 받은 두 인자가 같은지 확인한다.
+* assertTrue() : 매개변수로 받은 인자가 참인지 확인한다.
+* assertNull() : 매개변수로 받은 인자가 `null`인지 확인한다.
+* assertNotNull() : 매개변수로 받은 인자가 `null`이 아닌지 확인한다.
+* assertThrows() : 특정 타입의 `Exception`이 `throws`되는지 확인한다.
+  - 특정 타입의 `Exception`이 반환될 것으로 예상했는데 안되면 테스트에 실패한다.
+  - 결과를 해당 타입의 `Exception` 객체로 반환받을 수 있다.
+  ```java
+  class AppTest {
+  
+    @Test
+    @DisplayName("assertThrows 작성")
+    void checkThrows() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> new App(-10));
+        String message = exception.getMessage();
+        assertEquals("limit은 0보다 커야 한다.", message);
+    }
+  }
+  ```
+* assertTimeout() : 
+* assertTimeoutPreemptively() : 
+  - `ThreadLocal`은 다른 스레드에 공유되지 않는다.
+  - 🔥 Spring Transaction은 `ThreadLocal`을 기반으로 하기 때문에 종종 트랜잭션에 실패했는데도 Rollback되지 않는 문제가 발생하기도 한다. 주의하자.
+* assertAll() : Executable 타입을 인자로 받는다. 따라서 위의 api들을 람다식 형태로 변환해 이 메서드의 인자로 전달할 수 있다. 이러면 모든 테스트를 동시에 수행한다.
+  ```java
+  class AppTest {
+    @Test
+    void create_app() {
+        App app = new App();
+        app.setStatus(AppStatus.DRAFT);
+        app.setLimit(-10);
+
+        /*
+        assertNotNull(app);
+        assertEquals(AppStatus.DRAFT, app.getStatus(),
+                () -> "스터디를 처음 만들면 상태값이 " + AppStatus.DRAFT + "여야 한다."); // 통과
+        assertTrue(app.getLimit() > 0, "스터디 최대 참석 가능 인원은 0보다 커야 한다."); // 실패
+         */
+        
+        // 위에 주석처리한 코드는 순서대로 테스트가 이루어졌다면, 테스트들을 모두 동시에 실행하는 메서드가 assertAll
+        assertAll(
+                () -> assertNotNull(app),
+                () -> assertEquals(AppStatus.DRAFT, app.getStatus(),
+                        () ->"스터디를 처음 만들면 상태값이 " + AppStatus.DRAFT + "여야 한다."),
+                () -> assertTrue(app.getLimit() > 0, "스터디 최대 참석 가능 인원은 0보다 커야 한다.")
+        );
+    }
+  }
+  ```
+  - Cf. 실패 시 결과 : `Multiple Failures (2 failures)`
+
+
+### 테스트 메세지 작성
+테스트 실패시 콘솔에 해당 메세지가 출력되게 할 수 있다. 이 메세지를 람다식 형태로 전달해주면 필요할 때만 실행시키게 된다. (최소한으로 실행하여 리소스를 아낄 수 있다.)
+- Ex) assertEquals의 세 번째 인자로 메세지를 입력받아, 테스트 결과가 `false`일 경우 해당 메세지가 출력되게 할 수 있다.
+```java
+class AppTest {
+    @Test
+    void check_equal() {
+        App app = new App();
+        app.setStatus(AppStatus.STARTED);
+        assertEquals(AppStatus.DRAFT, app.getStatus(), () -> "스터디를 처음 만들면 상태값이 " + AppStatus.DRAFT + "여야 한다.");
+    }
+}
+```
